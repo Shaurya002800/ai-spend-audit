@@ -2,27 +2,33 @@ import { createClient } from "@supabase/supabase-js";
 
 let supabaseInstance: ReturnType<typeof createClient> | null = null;
 
-export function initializeSupabase() {
+function getSupabase() {
   if (supabaseInstance) return supabaseInstance;
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!url || !key) {
-    throw new Error("Missing Supabase environment variables");
+    throw new Error(
+      `Missing Supabase environment variables. URL: ${!!url}, Key: ${!!key}`
+    );
   }
 
   supabaseInstance = createClient(url, key);
   return supabaseInstance;
 }
 
-export function getSupabase() {
-  return initializeSupabase();
-}
-
-// For backward compatibility - will be initialized on first use
+// For backward compatibility - properly export the client
 export const supabase = {
-  from: (tableName: string) => getSupabase().from(tableName),
+  from: (table: string) => {
+    try {
+      const client = getSupabase();
+      return client.from(table);
+    } catch (error) {
+      console.error("Supabase initialization error:", error);
+      throw error;
+    }
+  },
 } as any;
 
 export interface AuditRecord {

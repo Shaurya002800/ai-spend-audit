@@ -17,12 +17,13 @@ function getResendClient(): Resend {
 }
 
 export async function POST(req: NextRequest) {
-  const body = await req.json();
+  try {
+    const body = await req.json();
 
-  // Honeypot
-  if (body._hp && body._hp !== "") {
-    return NextResponse.json({ error: "Bad request" }, { status: 400 });
-  }
+    // Honeypot
+    if (body._hp && body._hp !== "") {
+      return NextResponse.json({ error: "Bad request" }, { status: 400 });
+    }
 
   const { shareId, email, companyName, role, teamSize, monthlySavings } = body;
 
@@ -105,4 +106,11 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Lead API error:", error);
+    return NextResponse.json(
+      { error: "Internal server error. Please try again." },
+      { status: 500 }
+    );
+  }
 }

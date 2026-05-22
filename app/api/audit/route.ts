@@ -79,56 +79,64 @@ function generateFallbackSummary(
 }
 
 export async function POST(req: NextRequest) {
-  // Honeypot check
-  const body = await req.json();
-  if (body._hp && body._hp !== "") {
-    return NextResponse.json({ error: "Bad request" }, { status: 400 });
-  }
-
-  // Rate limiting
-  const ip = req.headers.get("x-forwarded-for") || "unknown";
-  if (!checkRateLimit(ip)) {
-    return NextResponse.json({ error: "Rate limit exceeded. Try again in an hour." }, { status: 429 });
-  }
-
-  const input: AuditInput = body.input;
-
-  // Validate
-  if (!input || !input.tools || input.tools.length === 0) {
-    return NextResponse.json({ error: "No tools provided" }, { status: 400 });
-  }
-
-  // Run deterministic audit engine
-  const result = runAudit(input);
-
-  // Generate AI summary (with fallback)
-  let aiSummary: string;
   try {
-    aiSummary = await generateAISummary(input, result);
-  } catch (err) {
-    console.error("Anthropic API error:", err);
-    aiSummary = generateFallbackSummary(input, result);
-  }
+    // Honeypot check
+    const body = await req.json();
+    if (body._hp && body._hp !== "") {
+      return NextResponse.json({ error: "Bad request" }, { status: 400 });
+    }
 
-  // Generate share ID
-  const shareId = generateShareId();
+    // Rate limiting
+    const ip = req.headers.get("x-forwarded-for") || "unknown";
+    if (!checkRateLimit(ip)) {
+      return NextResponse.json({ error: "Rate limit exceeded. Try again in an hour." }, { status: 429 });
+    }
 
-  // Store in Supabase
-  try {
-    await supabase.from("audits").insert({
-      share_id: shareId,
-      audit_input: input as object,
-      audit_result: result as object,
-      ai_summary: aiSummary,
+    const input: AuditInput = body.input;
+
+    // Validate
+    if (!input || !input.tools || input.tools.length === 0) {
+      return NextResponse.json({ error: "No tools provided" }, { status: 400 });
+    }
+
+    // Run deterministic audit engine
+    const result = runAudit(input);
+
+    // Generate AI summary (with fallback)
+    let aiSummary: string;
+    try {
+      aiSummary = await generateAISummary(input, result);
+    } catch (err) {
+      console.error("Anthropic API error:", err);
+      aiSummary = generateFallbackSummary(input, result);
+    }
+
+    // Generate share ID
+    const shareId = generateShareId();
+
+    // Store in Supabase
+    try {
+      await supabase.from("audits").insert({
+        share_id: shareId,
+        audit_input: input as object,
+        audit_result: result as object,
+        ai_summary: aiSummary,
+      });
+    } catch (err) {
+      console.error("Supabase insert error:", err);
+      // Don't fail the request if storage fails
+    }
+
+    return NextResponse.json({
+      result,
+      aiSummary,
+      shareId,
     });
-  } catch (err) {
-    console.error("Supabase insert error:", err);
-    // Don't fail the request if storage fails
+  } catch (error) {
+    console.error("Audit API error:", error);
+    return NextResponse.json(
+      { error: "Internal server error. Please try again." },
+      { status: 500 }
+    );
   }
-
-  return NextResponse.json({
-    result,
-    aiSummary,
-    shareId,
-  });
 }
