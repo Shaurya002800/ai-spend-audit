@@ -1,9 +1,29 @@
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+let supabaseInstance: ReturnType<typeof createClient> | null = null;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export function initializeSupabase() {
+  if (supabaseInstance) return supabaseInstance;
+
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!url || !key) {
+    throw new Error("Missing Supabase environment variables");
+  }
+
+  supabaseInstance = createClient(url, key);
+  return supabaseInstance;
+}
+
+export function getSupabase() {
+  return initializeSupabase();
+}
+
+// For backward compatibility - will be initialized on first use
+export const supabase = {
+  from: (tableName: string) => getSupabase().from(tableName),
+} as any;
 
 export interface AuditRecord {
   id: string;

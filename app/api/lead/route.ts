@@ -2,7 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 import { supabase } from "@/lib/supabase";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Lazy load Resend client
+let resend: Resend | null = null;
+
+function getResendClient(): Resend {
+  if (!resend) {
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) {
+      throw new Error("RESEND_API_KEY environment variable is not set");
+    }
+    resend = new Resend(apiKey);
+  }
+  return resend;
+}
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
@@ -43,7 +55,8 @@ export async function POST(req: NextRequest) {
   const isHighSavings = monthlySavings > 500;
 
   try {
-    await resend.emails.send({
+    const emailClient = getResendClient();
+    await emailClient.emails.send({
       from: "SpendLens <hello@spendlens.ai>",
       to: email,
       subject: `Your AI Spend Audit — $${Math.round(monthlySavings)}/mo savings identified`,

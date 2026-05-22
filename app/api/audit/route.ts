@@ -4,9 +4,21 @@ import { runAudit, AuditInput } from "@/lib/audit-engine";
 import { supabase } from "@/lib/supabase";
 import { generateShareId } from "@/lib/utils";
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
+// Initialize Anthropic only when needed (lazy loading)
+let anthropic: Anthropic | null = null;
+
+function getAnthropicClient(): Anthropic {
+  if (!anthropic) {
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) {
+      throw new Error("ANTHROPIC_API_KEY environment variable is not set");
+    }
+    anthropic = new Anthropic({
+      apiKey,
+    });
+  }
+  return anthropic;
+}
 
 // Rate limiting: simple in-memory store (use Redis/Upstash for production)
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
@@ -44,6 +56,7 @@ Context:
 
 Write a 100-word personalized audit summary. Be specific about their situation. Mention the dollar amount. Don't be generic. Don't use bullet points. Write like a trusted CFO advisor, not a sales pitch. If savings are minimal, be honest about it — "you're spending well" is a valid conclusion. End with one concrete next step.`;
 
+  const anthropic = getAnthropicClient();
   const message = await anthropic.messages.create({
     model: "claude-sonnet-4-20250514",
     max_tokens: 200,
