@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import SharedAuditClient from "./SharedAuditClient";
 
 interface PageProps {
-  params: { shareId: string };
+  params: Promise<{ shareId: string }>;
 }
 
 async function getAuditData(shareId: string) {
@@ -20,7 +20,8 @@ async function getAuditData(shareId: string) {
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const data = await getAuditData(params.shareId);
+  const resolvedParams = await params;
+  const data = await getAuditData(resolvedParams.shareId);
   if (!data) {
     return { title: "Audit not found — SpendLens" };
   }
@@ -45,8 +46,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function SharedAuditPage({ params }: PageProps) {
-  const data = await getAuditData(params.shareId);
+  const resolvedParams = await params;
+  const data = await getAuditData(resolvedParams.shareId);
   if (!data) notFound();
 
-  return <SharedAuditClient data={data} shareId={params.shareId} />;
+  return <SharedAuditClient data={data} shareId={resolvedParams.shareId} />;
 }
