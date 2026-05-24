@@ -136,6 +136,7 @@ export function getToolPlans(toolId: ToolId): string[] {
 
 // ─── Audit Logic ─────────────────────────────────────────────────────────────
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function getExpectedSpend(toolId: ToolId, planName: string, seats: number): number {
   const plans = PRICING[toolId];
   const plan = plans.find((p) => p.name === planName);
