@@ -39,3 +39,4 @@ vercel deploy                # deploy
 4. **Resend over SendGrid** — Typed SDK, React Email compatible, generous free tier, better deliverability for new domains. SendGrid's free tier requires IP warm-up; not worth it at this volume.
 
 5. **localStorage form persistence** — Users who refresh mid-form lose nothing. The tradeoff is a slightly heavier client and JSON parse error handling. URL state was too large; server sessions overkill for anonymous audits.
+ 
