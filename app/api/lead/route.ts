@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
             We found <strong style="color: #059669;">$${Math.round(monthlySavings)}/month</strong> in potential savings across your AI stack.
           </p>
           
-          <a href="${process.env.NEXT_PUBLIC_APP_URL}/r/${shareId}" 
+          <a href="https://ai-spend-audit.vercel.app/r/${shareId}" 
              style="display: inline-block; background: #059669; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px; margin-bottom: 32px;">
             View Full Report →
           </a>
@@ -94,7 +94,7 @@ export async function POST(req: NextRequest) {
           <p style="color: #9ca3af; font-size: 13px; border-top: 1px solid #e5e7eb; padding-top: 20px; margin-top: 32px;">
             SpendLens is a free tool by <a href="https://credex.rocks" style="color: #059669;">Credex</a>. 
             We help startups stop overpaying for AI infrastructure. 
-            <br>Your audit is saved at: ${process.env.NEXT_PUBLIC_APP_URL}/r/${shareId}
+            <br>Your audit is saved at: https://ai-spend-audit.vercel.app/r/${shareId}
           </p>
         </body>
         </html>

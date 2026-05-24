@@ -4,7 +4,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "SpendLens — Free AI Spend Audit for Startups",
   description: "Find out if you're overpaying for AI tools. Get an instant audit of your Cursor, Claude, ChatGPT, Copilot stack. Free, no login required.",
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://spendlens.ai"),
+  metadataBase: new URL("https://ai-spend-audit.vercel.app"),
   openGraph: {
     title: "SpendLens — Free AI Spend Audit",
     description: "Most startups overpay for AI tools by 30–50%. Find out where in 2 minutes.",

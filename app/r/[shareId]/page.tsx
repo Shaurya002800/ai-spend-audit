@@ -8,7 +8,7 @@ interface PageProps {
 
 async function getAuditData(shareId: string) {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const baseUrl = "https://ai-spend-audit.vercel.app";
     const res = await fetch(`${baseUrl}/api/share/${shareId}`, {
       cache: "no-store",
     });
