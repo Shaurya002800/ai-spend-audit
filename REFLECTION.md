@@ -1,84 +1,61 @@
 # REFLECTION.md
 
-> Answer all 5 questions, 150–400 words each. Be specific — vague answers score poorly.
+## 1. The hardest bug I hit this week, and how I debugged it
 
----
+The hardest issue this week was deployment, not the audit logic itself. Locally the app mostly worked, but once I started pushing toward Vercel I kept hitting errors that were annoying because they were half configuration problems and half code structure problems.
 
-## 1. The hardest bug you hit this week, and how you debugged it
+The two patterns that caused the most trouble were:
+- clients initializing too early
+- config that worked locally but was not valid for the deployed setup
 
-[FILL IN WITH YOUR REAL EXPERIENCE — here's a template to adapt]
+I had external clients wired in a way that was fine in development but brittle during deployment. I also ran into environment-variable-related confusion, where I had to separate "what exists in `.env.local`" from "what is actually present in Vercel." To debug that, I stopped guessing and added better logging plus a small diagnostics route. That helped a lot because it turned the problem from "something is broken" into "this exact piece is missing or initializing at the wrong time."
 
-The hardest bug was the Claude Team plan minimum-seat calculation showing negative savings. When a user had 3 seats on the Team plan, the engine was calculating `30 * 3 = $90` as the billed amount, but the actual minimum billing is `30 * 5 = $150`. So the recommendation was showing $90 projected spend against a $90 input (they'd correctly entered what they actually paid), making the savings appear as zero even though the downgrade to 3x Pro ($60) would save them $30.
+Another issue was outdated framework config. The build was failing because `next.config.ts` still had config that no longer matched the version of Next.js being used. Once I removed the invalid part and simplified the config, the production build became much easier to reason about.
 
-My first hypothesis was a rounding issue. I added `console.log` statements throughout the `evaluateTool` function for `toolId === "claude"` and logged both `monthlySpend` (user input) and `projectedSpend` (engine calculation). That ruled out rounding — the values were exact.
+The big lesson for me was that deployment bugs usually feel random until I make them observable. Better logs and smaller assumptions saved more time than trying to outthink the problem.
 
-Second hypothesis: the savings was being overridden by the overlap detection pass. I traced through `detectOverlap` — no Claude entry, so not that.
+## 2. A decision I reversed mid-week, and why I reversed it
 
-Third hypothesis: the logic was using the wrong input for the `actualBilled` calculation. I looked at the condition again:
+One thing I changed as I built the app was how much AI should be involved in the output. Early on, it was tempting to let the model do more of the recommendation work because that would have been faster to ship. I reversed that direction pretty quickly once I started thinking about whether someone could actually trust the results.
 
-```ts
-const actualBilled = 30 * 5; // minimum 5 seats
-const proCost = 20 * seats;
-```
+This app is supposed to talk about wasted spend in exact dollar terms. If the recommendation engine is fuzzy, then the whole product feels weak. So I kept the actual audit deterministic and only used AI for the short summary paragraph at the top.
 
-The bug was that `monthlySavings` was calculated as `Math.max(0, actualBilled - proCost)` — but I wasn't surfacing the *actual* savings from the *current* spend, I was calculating against the minimum billing theoretical amount. The fix was to use `monthlySpend - proCost` instead of `actualBilled - proCost`, since `monthlySpend` is what the user actually pays (which includes the minimum billing they're already absorbing).
+That ended up being the right call for two reasons:
+- the savings math became easier to test
+- the output felt more defensible
 
-After the fix, a 3-seat Team plan at $150/mo → Pro at $60/mo correctly shows $90/mo savings. The test I wrote for this case (test 3) caught future regressions.
+I also changed my approach to deployment prep. At first I was treating it like something I would handle after the product was "done," but a lot of the real work late in the week was making the app safe to build and run in production. I wish I had taken that seriously a little earlier.
 
----
+## 3. What I would build in week 2
 
-## 2. A decision you reversed mid-week, and what made you reverse it
+If I had another week, I would focus less on adding random features and more on making the current loop stronger.
 
-[FILL IN WITH YOUR REAL EXPERIENCE]
+First, I would improve the share experience. A per-audit social preview image would make the shared link much more compelling than a generic preview. Right now the app works, but the share loop is still basic.
 
-My original design showed the email capture form *before* the audit results — the theory being that a locked preview would increase conversion. I built it that way on Day 2 and looked at it for about 10 minutes before reversing the decision.
+Second, I would add some lightweight analytics around what combinations of tools show up most often and what savings patterns are common. That would help both product decisions and GTM messaging.
 
-The reversal happened because the assignment brief explicitly states: *"Email is captured after value is shown, never before."* I had missed this on first read. But beyond the explicit instruction, the reasoning is also correct: a cold visitor from a tweet or HN post has zero trust in SpendLens. Asking for an email before showing results is a classic mistake that kills conversion for tools at this stage.
+Third, I would tighten the lead handoff. Right now the app does the core audit and email capture, but I would want a clearer path for high-savings users, especially the ones who are actually good Credex leads.
 
-The revised flow — show full results, then offer to email the report — trades email capture rate for trust. The right tradeoff for a tool whose primary value is the insight, not the lead form. A user who sees real savings and *then* gives their email is a higher-quality lead anyway.
+Fourth, I would make pricing maintenance less manual. The engine is only useful if the pricing assumptions stay fresh, so even a small verification workflow would help.
 
-The implementation change took about 20 minutes (moved the LeadForm component below the results, removed the gate). The real cost was realizing I should have read the brief more carefully on Day 1.
+## 4. How I used AI tools
 
----
+I used AI tools as helpers, not as the source of truth.
 
-## 3. What you would build in week 2 if you had it
+Copilot was useful for speeding up repetitive parts like object shapes, test boilerplate, and small UI patterns. It saved time when I already knew what I wanted and just needed to write it faster.
 
-[FILL IN WITH YOUR REAL IDEAS — here's a strong template]
+Claude was more useful for brainstorming and scaffolding. It helped me think through structure, edge cases, and wording, especially when I wanted a second pass on an idea. I still rewrote a lot of what came out of it.
 
-**Priority 1: Dynamic OG image generation.** Right now the share page uses a static OG image. The viral loop breaks if every shared audit looks identical on Twitter. Using `@vercel/og`, I'd generate a per-audit image showing the savings number, tool icons, and a "Run yours at spendlens.ai" CTA — rendered at the Edge in ~50ms. This is the single highest-leverage feature for organic distribution.
+What I did not want AI to own was the pricing logic itself. For a project like this, the exact recommendation rules matter more than sounding smart. I was comfortable using AI to help phrase a summary, but not comfortable asking it to decide the real savings number.
 
-**Priority 2: Benchmark mode.** "Your team of 5 spends $340/mo on AI — engineering teams your size average $180/mo." This requires building a simple aggregation query over stored audits. The data exists after a week of real usage; I just need the query and the UI element. This would be the most shareable stat in the report.
-
-**Priority 3: Embeddable widget.** A `<script>` tag bloggers and newsletters can drop in. The CTA: "Audit your AI stack in 2 minutes." Renders an inline form that posts to the SpendLens API. Distribution multiplier with zero marginal cost. Implementation: a standalone JS bundle with a Shadow DOM wrapper so it doesn't conflict with host page styles.
-
-**Priority 4: Real-time pricing freshness.** Currently pricing is hardcoded and verified manually. I'd scrape official pricing pages weekly (Cursor, Anthropic, OpenAI) and compare against stored values, triggering a Slack alert if a price changes. Otherwise the audit engine silently gives wrong recommendations after a vendor reprices.
-
----
-
-## 4. How you used AI tools
-
-[FILL IN WITH YOUR REAL USAGE — be honest, they check]
-
-I used Claude Sonnet (via Claude.ai) and GitHub Copilot throughout the week.
-
-**Where Claude was most useful:** Drafting the initial structure of `audit-engine.ts` — I described the data model and the types of recommendations I wanted, and Claude gave me a scaffold that I significantly rewrote. Also useful for the Supabase SQL schema and the Resend email HTML (neither of which I've written recently enough to have templates memorized).
-
-**Where Copilot was most useful:** Inline completions for repetitive patterns — the `PRICING` data object, the `ACTION_CONFIG` mapping in AuditResults, and the test file. It correctly inferred the pattern after 2-3 examples.
-
-**What I didn't trust AI with:** The actual recommendation logic. I wrote every `if` statement in `evaluateTool()` myself, cross-referencing the official pricing pages. An AI-generated audit engine would hallucinate numbers or create reasoning that sounds plausible but wouldn't survive scrutiny from someone who actually knows the tools.
-
-**One specific time AI was wrong:** I asked Claude to write the Claude Team plan minimum-seat check. It wrote the condition as `if (plan === "Team" && seats < 3)` — using 3 as the minimum. The actual Claude Team minimum is 5 seats. I caught this immediately because I had the official pricing page open. The wrong threshold would have caused the engine to miss real savings for 3-4 seat teams. I rewrote the condition manually after verifying on claude.ai/pricing.
-
----
+In general, AI was good for momentum. It was not a substitute for checking the actual app behavior, reading the framework errors, or verifying the pricing assumptions.
 
 ## 5. Self-rating
 
 | Dimension | Rating | Reason |
 |---|---|---|
-| **Discipline** | [X]/10 | [e.g., "Committed on 6 of 7 days; took one day off for family and logged it honestly"] |
-| **Code quality** | [X]/10 | [e.g., "TypeScript throughout, no any types, tests for the critical path, but no error boundaries on the client components"] |
-| **Design sense** | [X]/10 | [e.g., "The results page is visually strong; the form is functional but the tool-row layout gets cramped on mobile below 375px"] |
-| **Problem solving** | [X]/10 | [e.g., "Caught the minimum-seat bug before shipping; didn't over-engineer the rate limiter for this stage"] |
-| **Entrepreneurial thinking** | [X]/10 | [e.g., "GTM and economics are specific and grounded; user interviews were real conversations that changed two design decisions"] |
-
-> Fill in your real ratings with honest one-sentence reasons. Credex reads these carefully.
+| Discipline | 7/10 | I kept moving every day and got the project to a shippable state, but I definitely left some cleanup and deployment thinking later than ideal. |
+| Code quality | 7/10 | The core audit logic is testable and the app works end to end, but there are still places I would tighten if this were continuing past the assignment. |
+| Design sense | 7/10 | The app is clear and usable, and the results flow is stronger than the initial form flow. There is still room to improve polish and consistency. |
+| Problem solving | 8/10 | I ran into real deployment issues and worked through them without needing to throw the whole setup away. |
+| Entrepreneurial thinking | 7/10 | I think the product angle is reasonable and practical, but the distribution and validation side would need more real-world testing. |

@@ -1,71 +1,43 @@
-# Deployment Troubleshooting Guide
+# DEPLOYMENT_TROUBLESHOOTING.md
 
-## Current Issues
+This is the short version of the deployment issues I ran into and how I checked them.
 
-### Issue 1: NEXT_PUBLIC_APP_URL Not Set Correctly
-**Problem:** The environment variable `NEXT_PUBLIC_APP_URL` is set to `http://localhost:3000` locally, but needs to be your actual deployed domain on Vercel.
+## 1. Environment variables
 
-**Solution:** Go to Vercel Dashboard and set:
-```
-NEXT_PUBLIC_APP_URL=https://ai-powered-learning-universe.vercel.app
-```
+The first thing to verify on Vercel is that the expected environment variables are actually set there, not just locally.
 
-### Issue 2: Check All Environment Variables
-Visit `/api/diagnostics` endpoint to verify all environment variables are set:
-```
-https://ai-powered-learning-universe.vercel.app/api/diagnostics
-```
+Required:
 
-## Environment Variables Checklist
-
-You must set these in Vercel Project Settings → Environment Variables:
-
-```
-ANTHROPIC_API_KEY=sk-ant-api03-... (from console.anthropic.com)
-NEXT_PUBLIC_SUPABASE_URL=https://... (from supabase.com project settings)
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ... (from supabase.com project settings)
-RESEND_API_KEY=re_... (from resend.com)
-NEXT_PUBLIC_APP_URL=https://ai-powered-learning-universe.vercel.app (your domain)
+```bash
+ANTHROPIC_API_KEY
+NEXT_PUBLIC_SUPABASE_URL
+NEXT_PUBLIC_SUPABASE_ANON_KEY
+RESEND_API_KEY
+NEXT_PUBLIC_APP_URL
 ```
 
-## How to Check Logs
+## 2. App URL
 
-1. Go to Vercel Dashboard
-2. Select your project: `ai-spend-audit`
-3. Click "Deployments" tab
-4. Click the latest deployment
-5. Click "Runtime Logs" tab to see server errors
-6. Check "Build Logs" for build-time errors
+`NEXT_PUBLIC_APP_URL` needs to match the deployed domain, otherwise share links and metadata can point to the wrong place.
 
-## Common Errors & Solutions
+## 3. Diagnostics route
 
-### 500 Internal Server Error
-- Check `/api/diagnostics` endpoint
-- Review Vercel Runtime Logs
-- Ensure all environment variables are set
+I added `/api/diagnostics` to make it easier to confirm whether the environment setup is correct in production.
 
-### Missing Environment Variables
-- Visit `/api/diagnostics` 
-- See which ones are missing (✗)
-- Add them to Vercel Project Settings
-- Trigger a new deployment
+## 4. What I would check if the deploy breaks
 
-### Supabase Connection Issues
-- Verify `NEXT_PUBLIC_SUPABASE_URL` is correct
-- Verify `NEXT_PUBLIC_SUPABASE_ANON_KEY` is correct
-- Check that the Supabase project has the `audits` table created
+1. Build logs in Vercel
+2. Runtime logs in Vercel
+3. `/api/diagnostics`
+4. Supabase credentials
+5. Whether any external client is initializing too early
 
-## Quick Deployment Fix
+## 5. Common failure pattern
 
-1. **Update NEXT_PUBLIC_APP_URL in Vercel:**
-   - Go to Settings → Environment Variables
-   - Set `NEXT_PUBLIC_APP_URL=https://ai-powered-learning-universe.vercel.app`
+The most annoying class of bug here was "works locally, fails in deploy." In this project, that usually came down to one of these:
 
-2. **Redeploy:**
-   - Click "Deployments" tab
-   - Click the three dots menu on latest deployment
-   - Select "Redeploy"
+- wrong environment configuration
+- code that assumed env vars existed too early
+- framework config drifting out of date
 
-3. **Verify:**
-   - Visit `/api/diagnostics`
-   - All should show ✓ (check marks)
+That is why I ended up preferring lazy client initialization and simpler config.

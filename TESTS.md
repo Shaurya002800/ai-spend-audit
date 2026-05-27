@@ -1,44 +1,32 @@
 # TESTS.md
 
-All tests are in `__tests__/audit-engine.test.ts`. Run with:
+The tests for this project are in `__tests__/audit-engine.test.ts`.
+
+Run them with:
 
 ```bash
 npm test
 ```
 
-## Test Suite: Audit Engine
+## What the tests cover
 
-File: `__tests__/audit-engine.test.ts`
-Runner: Jest + ts-jest
-Covers: The core `runAudit()` function and all recommendation logic
+The current test file focuses on the core audit logic:
 
-| # | Test Name | What It Covers | Status |
-|---|---|---|---|
-| 1 | ChatGPT Pro for 3 users → downgrade to Team | Overkill plan detection for ChatGPT Pro ($200/seat) vs Team ($30/seat) | ✅ |
-| 2 | Cursor Business for 2 seats → downgrade to Pro | Small-team over-plan detection; verifies exact $40 savings | ✅ |
-| 3 | Claude Team with 3 seats → downgrade to Pro | Minimum-seat billing trap detection (5-seat min = paying for phantom seats) | ✅ |
-| 4 | Cursor + Copilot overlap → eliminate Copilot | Redundant coding AI detection; verifies full spend elimination | ✅ |
-| 5 | Optimized stack → isAlreadyOptimal = true | Honest "you're spending well" path; no false savings manufactured | ✅ |
-| 6 | Large team on wrong plans → isHighSavings = true | High-savings threshold ($500+/mo) for Credex CTA trigger | ✅ |
-| 7 | Annual savings = monthly × 12 | Arithmetic correctness of annualized savings | ✅ |
-| 8 | Cursor Pro for research use case → switch | Use-case mismatch detection (code editor for non-coders) | ✅ |
-| 9 | Triple overlap (Cursor + Copilot + Windsurf) → eliminate Windsurf | Three-tool redundancy detection | ✅ |
-| 10 | Total current spend = sum of inputs | Spend aggregation arithmetic | ✅ |
+- plan mismatch recommendations
+- overlap detection across tools
+- savings math
+- annualized savings calculation
+- the "already optimized" path
+- high-savings detection
 
-## Running Tests
+I focused the tests on the engine because that is the part most likely to silently drift if I change recommendation rules.
 
-```bash
-# Run all tests
-npm test
+## What is not covered yet
 
-# Watch mode during development
-npm run test:watch
+I did not build a full test suite around the UI or API routes. If I were extending this project, I would add:
 
-# With coverage
-npx jest --coverage
-```
+- a couple of route tests for `/api/audit` and `/api/lead`
+- one end-to-end flow test
+- a few mobile UI checks
 
-## CI
-
-Tests run automatically on every push to `main` via GitHub Actions (`.github/workflows/ci.yml`).
-Green check required before merge.
+For the scope of this assignment, engine coverage felt like the highest-value place to spend the time.

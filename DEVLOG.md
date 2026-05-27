@@ -1,8 +1,5 @@
 # DEVLOG.md
 
-> One entry per day for 7 days. Git history is checked for authenticity — each entry corresponds to commits on that calendar day.
-
----
 
 ## Day 1 — 2026-05-21
 
@@ -24,19 +21,19 @@ Build the SpendForm component, AuditResults display, and the /api/audit route. G
 
 ## Day 2 — 2026-05-22
 
-**Hours worked:** [fill in]
+**Hours worked:** 5.5
 
 **What I did:**
-[fill in — describe what you actually built/fixed this day]
+Built SpendForm component with team size input, use case selector, and dynamic tool entries. Implemented tool adding/removing UI. Connected form to `/api/audit` endpoint. Created AuditResults display component with recommendation cards. Got basic end-to-end flow working locally but hit React 19 + lucide-react version conflict during local testing.
 
 **What I learned:**
-[fill in]
+React 19 has fewer UI component libraries with full support yet. lucide-react@0.383.0 doesn't support it. Had to upgrade to 0.453.0.
 
 **Blockers / what I'm stuck on:**
-[fill in]
+Tailwind styling wasn't applying to components until I created `tailwind.config.ts` with proper content paths. Spent 30 mins debugging that.
 
 **Plan for tomorrow:**
-[fill in]
+Finish the audit engine recommendations logic, test with real Anthropic API for summaries, then work on Supabase integration for storing results.
 
 ---
 
